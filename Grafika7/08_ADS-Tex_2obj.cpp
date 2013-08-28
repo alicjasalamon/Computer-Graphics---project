@@ -73,8 +73,8 @@ bool loadTGATexture(const char *texFileName)
 	if(texPointer == NULL) 
 		return false;
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -91,92 +91,44 @@ bool loadTGATexture(const char *texFileName)
 // inicjalizacja stałych elementów maszyny stanu OpenGL
 //=============================================================================
 
-void readObj(char *objFileName)
+// identyfikatory obiektów buforów ze współrzędnymi, normalnymi i indeksami
+GLuint verticesBuffer;
+GLuint normalsBuffer;
+GLuint indicesBuffer;
+GLuint texturesBuffer;
+	
+// indeksy atrybutów wierzchołków (współrzędne i normalne) z obiektu shadera
+GLuint verticesLocation;
+GLuint normalsLocation;
+GLuint texCoordsLocation;
+
+void prepareGround()
 {
-
-}
-
-int init(char *objFileName, char *texFileName)
-{
-// definicja sześcianu:
-// współrzędne wierzchołków wierzchołki
-GLfloat cubeVertices[4*3] = {
-	-0.5f,  0.f,  0.5f,
-	 0.5f,  0.f,  0.5f,
-	-0.5f,  0.f, -0.5f,
-	 0.5f,  0.f, -0.5f,
-};
-
-// normalne - nie ma potrzeby ich definiowania.
-// Współrzędne wierzchołków są za razem wektorami nomralnymi (po ich unormowaniu).
-
-// współrzędne tekstur dla ścian
-GLfloat cubeTexCoords[4*2] = {
-	// 1-sza ściana
-	0.0f, 0.0f,
-	1.0f, 0.0f,
-	0.0f, 1.0f,
-	1.0f, 1.0f
-};
-
-// indeksy
-GLuint cubeIndices[3*2] = {
-	// 1-sza ściana
-	0, 1, 2,
-	2, 1, 3
-};
-
-	int objError;
-	// identyfikatory obiektów buforów ze współrzędnymi, normalnymi i indeksami
-	GLuint verticesBuffer;
-	GLuint normalsBuffer;
-	GLuint indicesBuffer;
-	GLuint texturesBuffer;
 	
-	// indeksy atrybutów wierzchołków (współrzędne i normalne) z obiektu shadera
-	GLuint verticesLocation;
-	GLuint normalsLocation;
-	GLuint texCoordsLocation;
+	// współrzędne wierzchołków
+	GLfloat cubeVertices[4*3] = {
+		-0.5f,  0.f,  0.5f,
+		 0.5f,  0.f,  0.5f,
+		-0.5f,  0.f, -0.5f,
+		 0.5f,  0.f, -0.5f
+	};
 
-	// wczytanie obiektu z pliku .obj i przygotowanie go
-	if ((objError = obj.readFromFile(objFileName)) )
-		return objError;
-	
-	// przeskalowanie wczytanego obj, tak aby był wpisany w jednostkowy sześcian
-	// o środku w początku układu współrzędnych
-	obj.scale();
+	// normalne - nie ma potrzeby ich definiowania.
+	// Współrzędne wierzchołków są za razem wektorami normalnymi (po ich unormowaniu).
 
-	// sprawdzenie czy zostały poprawnie zdefiniowane normalne
-	if (!obj.nNormals)
-		// wygenerowanie uśrednionych normalnych
-		obj.genSmoothNormals();
-		// wygenerowanie normalnych dla ścianek
-		//obj.genFacesNormals();
-	else
-		if (!obj.normIndGood)
-			// gdy indeksy normalnych nie zgadzają się z indeksami wierzhołków
-			// należy przebudować obie tablice, aby były tak samo indeksowane
-			// przbudowanie indeksów normalnych i jeśli trzeba indeksów wierchołków
-			obj.rebuildAttribTable('n');
+	// współrzędne tekstur dla ścian
+	GLfloat cubeTexCoords[4*2] = {
+		0.0f, 0.0f,
+		1.0f, 0.0f,
+		0.0f, 1.0f,
+		1.0f, 1.0f
+	};
 
-
-
-	// ustawienie koloru tła
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-
-	// wczytanie shaderów i przygotowanie obsługi programu
-	AttachVertexShader	(texShader, "ADS_light_tex_vs.glsl");
-	AttachFragmentShader(texShader, "ADS_light_tex_fs.glsl");
-	
-	// wykonanie powiązania pomiędzy zmienną a indeksem ogólnych atrybutów wierzchołka
-	// operacja ta nie jest konieczna i będzie wykonana automatycznie w czasie
-	// konsolidacji shadera - przypisany zostanie "pierwszy wolny" indeks
-	LinkProgram(texShader);
-
-	// lokalizacja (indeksy) zmiennych w shaderze
-	verticesLocation	= glGetAttribLocation(texShader, "inVertex");
-	normalsLocation		= glGetAttribLocation(texShader, "inNormal");
-	texCoordsLocation	= glGetAttribLocation(texShader, "inTexCoord");
+	// indeksy
+	GLuint cubeIndices[3*2] = {
+		0, 1, 2,
+		2, 1, 3
+	};
 
 	// wygenerowanie i włączenie tablicy wierzchołków sześcianu
 	glGenVertexArrays(1, &cubeVertexArray);
@@ -206,23 +158,30 @@ GLuint cubeIndices[3*2] = {
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indicesBuffer);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cubeIndices), (GLuint*)cubeIndices, GL_STATIC_DRAW);
 
-	// włączenie obiektów buforów wierchołków
-	glEnableVertexAttribArray(verticesLocation);
-	glEnableVertexAttribArray(normalsLocation);
-	glEnableVertexAttribArray(texCoordsLocation);
+}
 
-	AttachVertexShader(toonShader, "toon_light_vs.glsl");
-	AttachFragmentShader(toonShader, "toon_light_fs.glsl");
-	// wykonanie powiązania pomiędzy zmienną a indeksem ogólnych atrybutów wierzchołka
-	// operacja ta nie jest konieczna i będzie wykonana automatycznie w czasie
-	// konsolidacji shadera - przypisany zostanie "pierwszy wolny" indeks
-	LinkProgram(toonShader);
+void readObj(objShape &obj, char *objFileName, GLuint &objVertexArray)
+{
+	// wczytanie obiektu z pliku .obj i przygotowanie go
+	obj.readFromFile(objFileName);
 
-	// lokalizacja (indeksy) zmiennych w shaderze
-	verticesLocation = glGetAttribLocation(toonShader, "inVertex");
-	normalsLocation = glGetAttribLocation(toonShader, "inNormal");
+	// przeskalowanie wczytanego obj, tak aby był wpisany w jednostkowy sześcian
+	// o środku w początku układu współrzędnych
+	obj.scale();
 
-	// wygenerowanie i włączenie tablicy wierzchołków .obj
+	// sprawdzenie czy zostały poprawnie zdefiniowane normalne
+	if (!obj.nNormals)
+		// wygenerowanie uśrednionych normalnych
+		obj.genSmoothNormals();
+		// wygenerowanie normalnych dla ścianek
+		//obj.genFacesNormals();
+	else
+		if (!obj.normIndGood)
+			// gdy indeksy normalnych nie zgadzają się z indeksami wierzhołków
+			// należy przebudować obie tablice, aby były tak samo indeksowane
+			// przbudowanie indeksów normalnych i jeśli trzeba indeksów wierchołków
+			obj.rebuildAttribTable('n');
+
 	glGenVertexArrays(1, &objVertexArray);
 	glBindVertexArray(objVertexArray);
 
@@ -247,6 +206,57 @@ GLuint cubeIndices[3*2] = {
 	glEnableVertexAttribArray(verticesLocation);
 	glEnableVertexAttribArray(normalsLocation);
 
+}
+
+int init(char *objFileName, char *texFileName)
+{
+	// ustawienie koloru tła
+	//0	49	83
+	glClearColor(0.0f, 49.0/256.0 , 83.0f/256.0, 1.0f);
+
+	// wczytanie shaderów i przygotowanie obsługi programu
+	AttachVertexShader(texShader, "ADS_light_tex_vs.glsl");
+	AttachFragmentShader(texShader, "ADS_light_tex_fs.glsl");
+
+	// wykonanie powiązania pomiędzy zmienną a indeksem ogólnych atrybutów wierzchołka
+	// operacja ta nie jest konieczna i będzie wykonana automatycznie w czasie
+	// konsolidacji shadera - przypisany zostanie "pierwszy wolny" indeks
+	LinkProgram(texShader);
+
+	// lokalizacja (indeksy) zmiennych w shaderze
+	verticesLocation = glGetAttribLocation(texShader, "inVertex");
+	normalsLocation = glGetAttribLocation(texShader, "inNormal");
+	texCoordsLocation = glGetAttribLocation(texShader, "inTexCoord");
+
+	//////////////////////////////////////////////////////////////////////////////
+	//								PODŁOGA										//
+	//////////////////////////////////////////////////////////////////////////////
+
+	prepareGround();
+	
+	// włączenie obiektów buforów wierchołków
+	glEnableVertexAttribArray(verticesLocation);
+	glEnableVertexAttribArray(normalsLocation);
+	glEnableVertexAttribArray(texCoordsLocation);
+
+
+	AttachVertexShader(toonShader, "toon_light_vs.glsl");
+	AttachFragmentShader(toonShader, "toon_light_fs.glsl");
+
+	// wykonanie powiązania pomiędzy zmienną a indeksem ogólnych atrybutów wierzchołka
+	LinkProgram(toonShader);
+
+	// lokalizacja (indeksy) zmiennych w shaderze
+	verticesLocation = glGetAttribLocation(toonShader, "inVertex");
+	normalsLocation = glGetAttribLocation(toonShader, "inNormal");
+
+	// wygenerowanie i włączenie tablicy wierzchołków .obj
+	readObj(star, "resources\\obj\\star.obj", starVertexArray); 
+//	readObj(obj, "resources\\obj\\star.obj", objVertexArray); 
+	readObj(cone, "resources\\obj\\cone.obj", coneVertexArray); 
+	readObj(cylinder, "resources\\obj\\cylinder.obj", cylinderVertexArray); 
+
+	
 	// wyłączenie tablicy wierchołków
 	glBindVertexArray(0);
 
@@ -254,9 +264,8 @@ GLuint cubeIndices[3*2] = {
 	glGenTextures(1, &tgaTex);
 	glBindTexture(GL_TEXTURE_2D, tgaTex);
 	// załadowanie tekstury z pliku .tga
-	
 	if (! loadTGATexture(texFileName)) {
-		cout << "Nie ma pliku z tekstura: \"" << texFileName << "\"" << endl;
+		cout << "Nie ma pliku z teksturą: \"" << texFileName << "\"" << endl;
 		exit(1);
 	}
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -267,7 +276,7 @@ GLuint cubeIndices[3*2] = {
 	glEnable(GL_CULL_FACE);
 
 	// ustawienie początkowego położenia kamery
-	cameraFrame.SetOrigin(1.1f, 1.1f, 15.0f);
+	cameraFrame.SetOrigin(2.0f, 2.0f, 18.0f);
 	// zdefiniowanie potoku renderowania składającego się z dwóch stosów macierzy
 	transformPipeline.SetMatrixStacks(modelViewMatrix, projectionMatrix);
 	return 0;
@@ -288,7 +297,49 @@ void reshape(int width, int height)
 	projectionMatrix.LoadMatrix(viewFrustum.GetProjectionMatrix());
 }
 
-void drawTrunk(M3DVector4f lightEyeDir)
+void drawTrunk(M3DVector4f lightEyeDir, objShape obj, GLuint objVertexArray)
+{
+	
+	//---------------------------------------------------------------------------------------------
+	// === przekształcenia geometryczne i narysowanie obiektu w innym stanie układu ===
+	// Odłożenie obiektu macierzy na stos
+	//modelViewMatrix.PopMatrix();
+
+	// użycie obiektu shadera
+	glUseProgram(texShader);
+
+	glUniform3fv(glGetUniformLocation(texShader, "inLightDir"), 1, lightEyeDir);
+
+	modelViewMatrix.Rotate(rotateX, 1.0f, 0.0f, 0.0f);
+	modelViewMatrix.Rotate(rotateY, 0.0f, 1.0f, 0.0f);
+	modelViewMatrix.Rotate(rotateZ, 0.0f, 0.0f, 1.0f);
+	modelViewMatrix.Scale(1.0f, 2.0f, 1.0f);
+	modelViewMatrix.Translate(0.0f, 0.5f, 0.0f);
+
+	// załadowanie zmiennej jednorodnej - iloczynu macierzy modelu widoku i projekcji
+	glUniformMatrix4fv(glGetUniformLocation(texShader, "modelViewProjectionMatrix"),
+		1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
+
+	// załadowanie zmiennej jednorodnej - transponowanej macierzy modelu widoku
+	glUniformMatrix4fv(glGetUniformLocation(texShader, "modelViewMatrix"),
+		1, GL_FALSE, transformPipeline.GetModelViewMatrix());
+
+	// załadowanie zmiennej jednorodnej - identyfikatora tekstury
+	glUniform1i(glGetUniformLocation(texShader ,"fileTexture"), 0);
+	
+	// włączenie tablicy wierzchołków .obj
+	glBindVertexArray(objVertexArray);
+	// narysowanie danych zawartych w tablicy wierzchołków .obj
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glDrawElements(GL_TRIANGLES, 3*obj.nFaces, GL_UNSIGNED_INT, 0);
+
+	// zdjęcie zapamiętanej macierzy widoku-mocelu ze stosu
+	modelViewMatrix.PopMatrix();
+
+	//---------------------------------------------------------------------------------------------
+}
+
+void drawTree(M3DVector4f lightEyeDir, objShape obj, GLuint objVertexArray)
 {
 	
 	//---------------------------------------------------------------------------------------------
@@ -301,16 +352,12 @@ void drawTrunk(M3DVector4f lightEyeDir)
 
 	glUniform3fv(glGetUniformLocation(texShader, "inLightDir"), 1, lightEyeDir);
 
-	modelViewMatrix.Rotate(rotateX, 1.0f, 0.0f, 0.0f);
-	modelViewMatrix.Rotate(rotateY, 0.0f, 1.0f, 0.0f);
-	modelViewMatrix.Rotate(rotateZ, 0.0f, 0.0f, 1.0f);
+	//////////////////////////////////////////////////////////////////////////////////////
+	//									DÓŁ												//
+	//////////////////////////////////////////////////////////////////////////////////////
 
-	modelViewMatrix.Scale(1.0f, 2.0f, 1.0f);
-
-	// przesunięcie układu
-	modelViewMatrix.Translate(0.0f, 0.5f, 0.0f);
-
-	// wykonanie obrotów układu
+	modelViewMatrix.Translate(0.0f, 1.5f, 0.0f);
+	modelViewMatrix.Scale(8.0f, 2.0f, 8.0f);
 
 
 	// załadowanie zmiennej jednorodnej - iloczynu macierzy modelu widoku i projekcji
@@ -323,13 +370,49 @@ void drawTrunk(M3DVector4f lightEyeDir)
 
 	// załadowanie zmiennej jednorodnej - identyfikatora tekstury
 	glUniform1i(glGetUniformLocation(texShader ,"fileTexture"), 0);
-
-	// włączenie tablicy wierzchołków sześcianu
-	glBindVertexArray(cubeVertexArray);
 	
 	// włączenie tablicy wierzchołków .obj
 	glBindVertexArray(objVertexArray);
 	// narysowanie danych zawartych w tablicy wierzchołków .obj
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glDrawElements(GL_TRIANGLES, 3*obj.nFaces, GL_UNSIGNED_INT, 0);
+
+	//////////////////////////////////////////////////////////////////////////////////////
+	//									ŚRODEK											//
+	//////////////////////////////////////////////////////////////////////////////////////
+
+	modelViewMatrix.Translate(0.0f, 0.5f, 0.0f);
+	modelViewMatrix.Scale(0.7f, 0.8f, 0.7f);
+
+
+	glUniformMatrix4fv(glGetUniformLocation(texShader, "modelViewProjectionMatrix"),
+		1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
+
+	glUniformMatrix4fv(glGetUniformLocation(texShader, "modelViewMatrix"),
+		1, GL_FALSE, transformPipeline.GetModelViewMatrix());
+
+	glUniform1i(glGetUniformLocation(texShader ,"fileTexture"), 0);
+	
+	glBindVertexArray(objVertexArray);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glDrawElements(GL_TRIANGLES, 3*obj.nFaces, GL_UNSIGNED_INT, 0);
+
+	//////////////////////////////////////////////////////////////////////////////////////
+	//									GÓRA											//
+	//////////////////////////////////////////////////////////////////////////////////////
+
+	modelViewMatrix.Translate(0.0f, 0.5f, 0.0f);
+	modelViewMatrix.Scale(0.6f, 0.7f, 0.6f);
+
+	glUniformMatrix4fv(glGetUniformLocation(texShader, "modelViewProjectionMatrix"),
+		1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
+
+	glUniformMatrix4fv(glGetUniformLocation(texShader, "modelViewMatrix"),
+		1, GL_FALSE, transformPipeline.GetModelViewMatrix());
+
+	glUniform1i(glGetUniformLocation(texShader ,"fileTexture"), 0);
+	
+	glBindVertexArray(objVertexArray);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glDrawElements(GL_TRIANGLES, 3*obj.nFaces, GL_UNSIGNED_INT, 0);
 
@@ -354,7 +437,6 @@ void display(void)
 	// (nie ma zatem potrzeby uprzedniego ładowania macierzy jednostkowej)
 	modelViewMatrix.LoadMatrix(mCamera);
 
-
 	// użycie obiektu shadera
 	glUseProgram(toonShader);
 
@@ -370,7 +452,9 @@ void display(void)
 
 	// === przekształcenia geometryczne i narysowanie obiektu w innym stanie układu ===
 	// Odłożenie obiektu macierzy na stos
+
 	modelViewMatrix.PushMatrix();
+
 
 	// użycie obiektu shadera
 	glUseProgram(texShader);
@@ -379,7 +463,7 @@ void display(void)
 
 	// przesunięcie układu
 	modelViewMatrix.Translate(0.0f, 0.0f, 0.0f);
-	modelViewMatrix.Scale(10.0f, 10.0f, 10.0f);
+	modelViewMatrix.Scale(100.0f, 100.0f, 100.0f);
 	// wykonanie obrotów układu
 	modelViewMatrix.Rotate(rotateX, 1.0f, 0.0f, 0.0f);
 	modelViewMatrix.Rotate(rotateY, 0.0f, 1.0f, 0.0f);
@@ -406,9 +490,11 @@ void display(void)
 	glDrawElements(GL_TRIANGLES, 3*2, GL_UNSIGNED_INT, 0);
 
 	// zdjęcie zapamiętanej macierzy widoku-mocelu ze stosu
-	//modelViewMatrix.PopMatrix();
+	modelViewMatrix.PopMatrix();
+	
+	drawTrunk(lightEyeDir, cylinder, cylinderVertexArray);
+	drawTree(lightEyeDir, cone, coneVertexArray);
 
-	drawTrunk(lightEyeDir);
 	// wyłączenie tablic wierzhołków
 	glBindVertexArray(0);
 
@@ -549,7 +635,7 @@ int main(int argc, char** argv)
 
 
 	// wykonanie czynności przygotowawczych programu
-	if (init("resources\\obj\\cylinder.obj", "resources\\tga\\grass.tga"))
+	if (init("klfasld", "resources\\tga\\sciolka.tga"))
 		return 3;
 
 

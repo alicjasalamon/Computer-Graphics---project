@@ -43,10 +43,10 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="ADS_light_tex_fs.glsl">
+    <None Include="toon_light_fs.glsl">
       <Filter>Source Files</Filter>
     </None>
-    <None Include="ADS_light_tex_vs.glsl">
+    <None Include="toon_light_vs.glsl">
       <Filter>Source Files</Filter>
     </None>
   </ItemGroup>

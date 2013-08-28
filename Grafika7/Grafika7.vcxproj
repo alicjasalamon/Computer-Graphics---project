@@ -77,8 +77,8 @@
     <ClInclude Include="vecmatquat.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="ADS_light_tex_fs.glsl" />
-    <None Include="ADS_light_tex_vs.glsl" />
+    <None Include="toon_light_fs.glsl" />
+    <None Include="toon_light_vs.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
