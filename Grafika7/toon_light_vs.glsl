@@ -20,6 +20,10 @@ out vec3 lightDir;
 // wektor kierunku "do obserwatora" we współrzędnych obserwatora
 out vec3 eye;
 
+//color
+in vec4 color;
+out vec4 color2;
+
 void main(void)
 {
 	// Przekształcenie trójelementowego wektora współrzędnych do czteroelemntowego
@@ -34,5 +38,7 @@ void main(void)
 	// Obliczenie i ustawienie współrzędnych wierzchołka - w układzie obserwatora po
 	// wykonaniu operacji rzutowania - macirz Projekcji
 	gl_Position = modelViewProjectionMatrix * vertex;
+
+	color2=color;
 }
 

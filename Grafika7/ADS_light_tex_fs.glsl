@@ -7,6 +7,9 @@ in vec3 eye;
 in vec3 lightDir;
 in vec2 texCoord;
 
+uniform vec4 baseColor;
+
+
 // zmienna wejściowa - identyfikator tekstury
 uniform sampler2D fileTexture;
 

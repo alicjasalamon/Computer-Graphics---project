@@ -37,7 +37,7 @@ GLfloat rotateY = 0.0f;
 GLfloat rotateZ = 0.0f;
 
 // kierunek źródła światła
-GLfloat lightDir[4] = {5.0f, 5.0f, 3.0f, 1.0f};
+GLfloat lightDir[4] = {0.0f, 50.0f, 60.0f, 1.0f};
 
 // identyfikator obiektu programu
 GLuint toonShader, texShader;
@@ -58,6 +58,8 @@ objShape star;
 // identyfiakator tekstury
 GLuint tgaTex;
 
+//color
+GLuint baseColorUnif;
 //=============================================================================
 // załadowanie pliku TGA i zrobienie z niego tekstury
 //=============================================================================
@@ -334,31 +336,30 @@ void drawTrunk(M3DVector4f lightEyeDir, objShape obj, GLuint objVertexArray)
 	glDrawElements(GL_TRIANGLES, 3*obj.nFaces, GL_UNSIGNED_INT, 0);
 
 	// zdjęcie zapamiętanej macierzy widoku-mocelu ze stosu
-	modelViewMatrix.PopMatrix();
+	//modelViewMatrix.PopMatrix();
 
 	//---------------------------------------------------------------------------------------------
 }
 
-void drawTree(M3DVector4f lightEyeDir, objShape obj, GLuint objVertexArray)
+
+void drawStar(M3DVector4f lightEyeDir, objShape obj, GLuint objVertexArray)
 {
 	
 	//---------------------------------------------------------------------------------------------
 	// === przekształcenia geometryczne i narysowanie obiektu w innym stanie układu ===
 	// Odłożenie obiektu macierzy na stos
-	modelViewMatrix.PopMatrix();
+	//modelViewMatrix.PopMatrix();
 
 	// użycie obiektu shadera
 	glUseProgram(texShader);
 
 	glUniform3fv(glGetUniformLocation(texShader, "inLightDir"), 1, lightEyeDir);
 
-	//////////////////////////////////////////////////////////////////////////////////////
-	//									DÓŁ												//
-	//////////////////////////////////////////////////////////////////////////////////////
-
-	modelViewMatrix.Translate(0.0f, 1.5f, 0.0f);
-	modelViewMatrix.Scale(8.0f, 2.0f, 8.0f);
-
+	modelViewMatrix.Rotate(rotateX, 1.0f, 0.0f, 0.0f);
+	modelViewMatrix.Rotate(rotateY, 0.0f, 1.0f, 0.0f);
+	modelViewMatrix.Rotate(rotateZ, 0.0f, 0.0f, 1.0f);
+	modelViewMatrix.Scale(1.0f, 2.0f, 1.0f);
+	modelViewMatrix.Translate(0.0f, 0.5f, 0.0f);
 
 	// załadowanie zmiennej jednorodnej - iloczynu macierzy modelu widoku i projekcji
 	glUniformMatrix4fv(glGetUniformLocation(texShader, "modelViewProjectionMatrix"),
@@ -377,6 +378,52 @@ void drawTree(M3DVector4f lightEyeDir, objShape obj, GLuint objVertexArray)
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glDrawElements(GL_TRIANGLES, 3*obj.nFaces, GL_UNSIGNED_INT, 0);
 
+	// zdjęcie zapamiętanej macierzy widoku-mocelu ze stosu
+	modelViewMatrix.PopMatrix();
+
+	//---------------------------------------------------------------------------------------------
+}
+
+void drawTree(M3DVector4f lightEyeDir, objShape obj, GLuint objVertexArray)
+{
+	
+	//---------------------------------------------------------------------------------------------
+	// === przekształcenia geometryczne i narysowanie obiektu w innym stanie układu ===
+	// Odłożenie obiektu macierzy na stos
+	//modelViewMatrix.PopMatrix();
+
+	// użycie obiektu shadera
+	glUseProgram(toonShader);
+
+	glUniform3fv(glGetUniformLocation(toonShader, "inLightDir"), 1, lightEyeDir);
+
+	//////////////////////////////////////////////////////////////////////////////////////
+	//									DÓŁ												//
+	//////////////////////////////////////////////////////////////////////////////////////
+
+	modelViewMatrix.Translate(0.0f, 1.5f, 0.0f);
+	modelViewMatrix.Scale(8.0f, 2.0f, 8.0f);
+
+
+	// załadowanie zmiennej jednorodnej - iloczynu macierzy modelu widoku i projekcji
+	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewProjectionMatrix"),
+		1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
+
+	// załadowanie zmiennej jednorodnej - transponowanej macierzy modelu widoku
+	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewMatrix"),
+		1, GL_FALSE, transformPipeline.GetModelViewMatrix());
+
+	// załadowanie zmiennej jednorodnej - identyfikatora tekstury
+	glUniform1i(glGetUniformLocation(toonShader ,"fileTexture"), 0);
+
+	glUniform4f(glGetUniformLocation(toonShader ,"color2"), 0.0f, 102.0f/256.0, 51.0f/256.0, 1.0f);
+	
+	// włączenie tablicy wierzchołków .obj
+	glBindVertexArray(objVertexArray);
+	// narysowanie danych zawartych w tablicy wierzchołków .obj
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glDrawElements(GL_TRIANGLES, 3*obj.nFaces, GL_UNSIGNED_INT, 0);
+
 	//////////////////////////////////////////////////////////////////////////////////////
 	//									ŚRODEK											//
 	//////////////////////////////////////////////////////////////////////////////////////
@@ -385,13 +432,13 @@ void drawTree(M3DVector4f lightEyeDir, objShape obj, GLuint objVertexArray)
 	modelViewMatrix.Scale(0.7f, 0.8f, 0.7f);
 
 
-	glUniformMatrix4fv(glGetUniformLocation(texShader, "modelViewProjectionMatrix"),
+	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewProjectionMatrix"),
 		1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
 
-	glUniformMatrix4fv(glGetUniformLocation(texShader, "modelViewMatrix"),
+	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewMatrix"),
 		1, GL_FALSE, transformPipeline.GetModelViewMatrix());
 
-	glUniform1i(glGetUniformLocation(texShader ,"fileTexture"), 0);
+	glUniform1i(glGetUniformLocation(toonShader ,"fileTexture"), 0);
 	
 	glBindVertexArray(objVertexArray);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -404,20 +451,20 @@ void drawTree(M3DVector4f lightEyeDir, objShape obj, GLuint objVertexArray)
 	modelViewMatrix.Translate(0.0f, 0.5f, 0.0f);
 	modelViewMatrix.Scale(0.6f, 0.7f, 0.6f);
 
-	glUniformMatrix4fv(glGetUniformLocation(texShader, "modelViewProjectionMatrix"),
+	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewProjectionMatrix"),
 		1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
 
-	glUniformMatrix4fv(glGetUniformLocation(texShader, "modelViewMatrix"),
+	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewMatrix"),
 		1, GL_FALSE, transformPipeline.GetModelViewMatrix());
 
-	glUniform1i(glGetUniformLocation(texShader ,"fileTexture"), 0);
+	glUniform1i(glGetUniformLocation(toonShader ,"fileTexture"), 0);
 	
 	glBindVertexArray(objVertexArray);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glDrawElements(GL_TRIANGLES, 3*obj.nFaces, GL_UNSIGNED_INT, 0);
 
 	// zdjęcie zapamiętanej macierzy widoku-mocelu ze stosu
-	modelViewMatrix.PopMatrix();
+	//modelViewMatrix.PopMatrix();
 
 	//---------------------------------------------------------------------------------------------
 }
@@ -548,17 +595,17 @@ void standardKbd(unsigned char key, int x, int y)
 		case 'L': rotateZ -= 10.0f;
 			break;
 		// zdefiniowanie wektora kierunku światła
-		case 'u': lightDir[0] += 0.1;
+		case 'u': {lightDir[0] += 10.0; cout << "\n0 " << lightDir[0];}
 			break;
-		case 'U': lightDir[0] -= 0.1;
+		case 'U': {lightDir[0] -= 10.0; cout << "\n0 "<< lightDir[0];}
 			break;
-		case 'i': lightDir[1] += 0.1;
+		case 'i': {lightDir[1] += 10.0; cout << "\n1 "<< lightDir[1];}
 			break;
-		case 'I': lightDir[1] -= 0.1;
+		case 'I': {lightDir[1] -= 10.0; cout << "\n1 "<< lightDir[1];}
 			break;
-		case 'o': lightDir[2] += 0.1;
+		case 'o': {lightDir[2] += 10.0; cout << "\n2 "<< lightDir[2];}
 			break;
-		case 'O': lightDir[2] -= 0.1;
+		case 'O': {lightDir[2] -= 10.0; cout << "\n2 "<< lightDir[2];}
 			break;
 
 		case 27: exit(0);
