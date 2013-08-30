@@ -344,34 +344,26 @@ void drawTrunk(M3DVector4f lightEyeDir, objShape obj, GLuint objVertexArray)
 
 void drawStar(M3DVector4f lightEyeDir, objShape obj, GLuint objVertexArray)
 {
-	
-	//---------------------------------------------------------------------------------------------
-	// === przekształcenia geometryczne i narysowanie obiektu w innym stanie układu ===
-	// Odłożenie obiektu macierzy na stos
-	//modelViewMatrix.PopMatrix();
+//	modelViewMatrix.PopMatrix();
 
 	// użycie obiektu shadera
-	glUseProgram(texShader);
+	glUseProgram(toonShader);
 
-	glUniform3fv(glGetUniformLocation(texShader, "inLightDir"), 1, lightEyeDir);
+	glUniform3fv(glGetUniformLocation(toonShader, "inLightDir"), 1, lightEyeDir);
 
-	modelViewMatrix.Rotate(rotateX, 1.0f, 0.0f, 0.0f);
-	modelViewMatrix.Rotate(rotateY, 0.0f, 1.0f, 0.0f);
-	modelViewMatrix.Rotate(rotateZ, 0.0f, 0.0f, 1.0f);
-	modelViewMatrix.Scale(1.0f, 2.0f, 1.0f);
-	modelViewMatrix.Translate(0.0f, 0.5f, 0.0f);
+	modelViewMatrix.Scale(1.0f, 1.0f, 0.5f);
+	modelViewMatrix.Translate(0.0f, 0.7f, 0.0f);
 
 	// załadowanie zmiennej jednorodnej - iloczynu macierzy modelu widoku i projekcji
-	glUniformMatrix4fv(glGetUniformLocation(texShader, "modelViewProjectionMatrix"),
+	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewProjectionMatrix"),
 		1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
 
 	// załadowanie zmiennej jednorodnej - transponowanej macierzy modelu widoku
-	glUniformMatrix4fv(glGetUniformLocation(texShader, "modelViewMatrix"),
+	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewMatrix"),
 		1, GL_FALSE, transformPipeline.GetModelViewMatrix());
 
-	// załadowanie zmiennej jednorodnej - identyfikatora tekstury
-	glUniform1i(glGetUniformLocation(texShader ,"fileTexture"), 0);
-	
+	glUniform4f(glGetUniformLocation(toonShader ,"color2"), 254.0/256.0, 254.0/256.0, 51.0/256.0, 1.0f);	
+
 	// włączenie tablicy wierzchołków .obj
 	glBindVertexArray(objVertexArray);
 	// narysowanie danych zawartych w tablicy wierzchołków .obj
@@ -379,7 +371,7 @@ void drawStar(M3DVector4f lightEyeDir, objShape obj, GLuint objVertexArray)
 	glDrawElements(GL_TRIANGLES, 3*obj.nFaces, GL_UNSIGNED_INT, 0);
 
 	// zdjęcie zapamiętanej macierzy widoku-mocelu ze stosu
-	modelViewMatrix.PopMatrix();
+	//modelViewMatrix.PopMatrix();
 
 	//---------------------------------------------------------------------------------------------
 }
@@ -541,6 +533,8 @@ void display(void)
 	
 	drawTrunk(lightEyeDir, cylinder, cylinderVertexArray);
 	drawTree(lightEyeDir, cone, coneVertexArray);
+	
+	drawStar(lightEyeDir, star, starVertexArray);
 
 	// wyłączenie tablic wierzhołków
 	glBindVertexArray(0);
