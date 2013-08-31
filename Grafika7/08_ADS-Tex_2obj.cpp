@@ -351,7 +351,7 @@ void drawStar(M3DVector4f lightEyeDir, objShape obj, GLuint objVertexArray)
 
 	glUniform3fv(glGetUniformLocation(toonShader, "inLightDir"), 1, lightEyeDir);
 
-	modelViewMatrix.Scale(1.0f, 1.0f, 0.5f);
+	modelViewMatrix.Scale(0.8f, 1.0f, 0.5f);
 	modelViewMatrix.Translate(0.0f, 0.7f, 0.0f);
 
 	// załadowanie zmiennej jednorodnej - iloczynu macierzy modelu widoku i projekcji
@@ -374,6 +374,42 @@ void drawStar(M3DVector4f lightEyeDir, objShape obj, GLuint objVertexArray)
 	//modelViewMatrix.PopMatrix();
 
 	//---------------------------------------------------------------------------------------------
+}
+double angle = 0.0;
+double R=0.0, G=0.0, B=0.0;
+void drawStars(M3DVector4f lightEyeDir, double x, double y, double z)
+{
+	modelViewMatrix.PushMatrix();
+
+	// użycie obiektu shadera
+	glUseProgram(toonShader);
+
+	glUniform3fv(glGetUniformLocation(toonShader, "inLightDir"), 1, lightEyeDir);
+
+	modelViewMatrix.Scale(0.1f, 0.1f, 0.1f);
+	modelViewMatrix.Translate(x, y, z);
+	modelViewMatrix.Rotate(angle, 0.0, 1.0, 0.0);
+	
+	angle += 0.3f;
+	// załadowanie zmiennej jednorodnej - iloczynu macierzy modelu widoku i projekcji
+	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewProjectionMatrix"),
+		1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
+
+	// załadowanie zmiennej jednorodnej - transponowanej macierzy modelu widoku
+	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewMatrix"),
+		1, GL_FALSE, transformPipeline.GetModelViewMatrix());
+
+	glUniform4f(glGetUniformLocation(toonShader ,"color2"), R,G,B, 1.0f);	
+
+	// włączenie tablicy wierzchołków .obj
+	glBindVertexArray(starVertexArray);
+	// narysowanie danych zawartych w tablicy wierzchołków .obj
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glDrawElements(GL_TRIANGLES, 3*star.nFaces, GL_UNSIGNED_INT, 0);
+
+	// zdjęcie zapamiętanej macierzy widoku-mocelu ze stosu
+	modelViewMatrix.PopMatrix();
+	
 }
 
 void drawTree(M3DVector4f lightEyeDir, objShape obj, GLuint objVertexArray)
@@ -405,9 +441,6 @@ void drawTree(M3DVector4f lightEyeDir, objShape obj, GLuint objVertexArray)
 	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewMatrix"),
 		1, GL_FALSE, transformPipeline.GetModelViewMatrix());
 
-	// załadowanie zmiennej jednorodnej - identyfikatora tekstury
-	glUniform1i(glGetUniformLocation(toonShader ,"fileTexture"), 0);
-
 	glUniform4f(glGetUniformLocation(toonShader ,"color2"), 0.0f, 102.0f/256.0, 51.0f/256.0, 1.0f);
 	
 	// włączenie tablicy wierzchołków .obj
@@ -415,6 +448,12 @@ void drawTree(M3DVector4f lightEyeDir, objShape obj, GLuint objVertexArray)
 	// narysowanie danych zawartych w tablicy wierzchołków .obj
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glDrawElements(GL_TRIANGLES, 3*obj.nFaces, GL_UNSIGNED_INT, 0);
+
+
+	drawStars(lightEyeDir,	2.5, -1.0, -2.5);
+	drawStars(lightEyeDir, -2.5, -1.0, -3.0);
+	drawStars(lightEyeDir, -2.5, -1.0,  2.5);
+	drawStars(lightEyeDir,	2.5, -1.0,  2.5);
 
 	//////////////////////////////////////////////////////////////////////////////////////
 	//									ŚRODEK											//
@@ -430,11 +469,17 @@ void drawTree(M3DVector4f lightEyeDir, objShape obj, GLuint objVertexArray)
 	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewMatrix"),
 		1, GL_FALSE, transformPipeline.GetModelViewMatrix());
 
-	glUniform1i(glGetUniformLocation(toonShader ,"fileTexture"), 0);
+	glUniform4f(glGetUniformLocation(toonShader ,"color2"), 0.0f, 102.0f/256.0, 51.0f/256.0, 1.0f);
 	
 	glBindVertexArray(objVertexArray);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glDrawElements(GL_TRIANGLES, 3*obj.nFaces, GL_UNSIGNED_INT, 0);
+
+	drawStars(lightEyeDir,	3.5, -1.0,  0.0);
+	drawStars(lightEyeDir, -3.5, -1.0,  0.0);
+	drawStars(lightEyeDir,  0.0, -1.0, -3.5);
+	drawStars(lightEyeDir,  0.0, -1.0,  3.5);
+	drawStars(lightEyeDir,  0.0, -1.0,  3.5);
 
 	//////////////////////////////////////////////////////////////////////////////////////
 	//									GÓRA											//
@@ -449,11 +494,16 @@ void drawTree(M3DVector4f lightEyeDir, objShape obj, GLuint objVertexArray)
 	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewMatrix"),
 		1, GL_FALSE, transformPipeline.GetModelViewMatrix());
 
-	glUniform1i(glGetUniformLocation(toonShader ,"fileTexture"), 0);
+	glUniform4f(glGetUniformLocation(toonShader ,"color2"), 0.0f, 102.0f/256.0, 51.0f/256.0, 1.0f);
 	
 	glBindVertexArray(objVertexArray);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glDrawElements(GL_TRIANGLES, 3*obj.nFaces, GL_UNSIGNED_INT, 0);
+
+	drawStars(lightEyeDir,	2.5, -1.0, -2.5);
+	drawStars(lightEyeDir, -2.5, -1.0, -3.0);
+	drawStars(lightEyeDir, -2.5, -1.0,  2.5);
+	drawStars(lightEyeDir,	2.5, -1.0,  2.5);
 
 	// zdjęcie zapamiętanej macierzy widoku-mocelu ze stosu
 	//modelViewMatrix.PopMatrix();
@@ -464,6 +514,8 @@ void drawTree(M3DVector4f lightEyeDir, objShape obj, GLuint objVertexArray)
 //=============================================================================
 // wyświetlenie sceny
 //=============================================================================
+double lol = 0.0f;
+
 void display(void)
 {
 	// czyszczenie bufora koloru
@@ -491,6 +543,11 @@ void display(void)
 
 	// === przekształcenia geometryczne i narysowanie obiektu w innym stanie układu ===
 	// Odłożenie obiektu macierzy na stos
+
+
+	modelViewMatrix.Rotate(lol, 0.0, 1.0, 0.0);
+	modelViewMatrix.Translate(5.0, 0.0, 0.0);
+	lol += 0.1;
 
 	modelViewMatrix.PushMatrix();
 
@@ -547,6 +604,9 @@ void display(void)
 
 	// wyrenderowanie sceny
 	glFlush();
+
+	glutSwapBuffers();
+	glutPostRedisplay();
 }
 
 //=============================================================================
@@ -563,17 +623,17 @@ void standardKbd(unsigned char key, int x, int y)
 	// obsługa standardowych klawiszy
 	switch (key) {
 		// zdefiniowanie obrotów kamery wokół osi x, y, z
-		case 'x': cameraFrame.RotateWorld(0.1f, 1.0f, 0.0f, 0.0f);
+		case '1': {if(R+0.2<=1.0) R+=0.2;}
 			break;
-		case 'X': cameraFrame.RotateWorld(-0.1f, 1.0f, 0.0f, 0.0f);
+		case '2': {if(R-0.2>=0.0) R-=0.2;}
 			break;
-		case 'y': cameraFrame.RotateWorld(0.1f, 0.0f, 1.0f, 0.0f);
+		case '3': {if(G+0.2<=1.0) G+=0.2;}
 			break;
-		case 'Y': cameraFrame.RotateWorld(-0.1f, 0.0f, 1.0f, 0.0f);
+		case '4': {if(G-0.2>=0.0) G-=0.2;}
 			break;
-		case 'z': cameraFrame.RotateWorld(0.1f, 0.0f, 0.0f, 1.0f);
+		case '5': {if(B+0.2<=1.0) B+=0.2;}
 			break;
-		case 'Z': cameraFrame.RotateWorld(-0.1f, 0.0f, 0.0f, 1.0f);
+		case '6': {if(B-0.2>=0.0) B-=0.2;}
 			break;
 		// zdefiniowanie obrotów układu wokół osi x, y, z
 		case 'j': rotateX += 10.0f;
