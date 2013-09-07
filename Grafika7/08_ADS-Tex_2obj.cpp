@@ -1,5 +1,4 @@
 // dołączenie plików nagłówkowych z biblioteki J.Ganczarskiego
-
 #include "shaders.h"
 #include "vecmatquat.h"
 #include "obj.h"
@@ -31,13 +30,9 @@ GLFrustum			viewFrustum;		// bryła obcięcia
 GLGeometryTransform	transformPipeline;	// potok renderowania
 GLFrame				cameraFrame;		// obiekt kamery
 
-// kąty obrotu obiektu
-GLfloat rotateX = 0.0f;
-GLfloat rotateY = 0.0f;
-GLfloat rotateZ = 0.0f;
-
 // kierunek źródła światła
-GLfloat lightDir[4] = {0.0f, 50.0f, 60.0f, 1.0f};
+GLfloat lightDir[4];
+M3DVector4f lightEyeDir;
 
 // identyfikator obiektu programu
 GLuint toonShader, texShader;
@@ -46,10 +41,10 @@ GLuint toonShader, texShader;
 GLuint objVertexArray;
 GLuint coneVertexArray;
 GLuint cylinderVertexArray;
-GLuint cubeVertexArray;
+GLuint groundVertexArray;
 GLuint starVertexArray;
 
-// obiekt reprezentujący bryłę wczytaną jako .obj
+// obiekty reprezentujący bryły wczytane jako .obj
 objShape obj;
 objShape cone;
 objShape cylinder;
@@ -57,9 +52,11 @@ objShape star;
 
 // identyfiakator tekstury
 GLuint tgaTex;
+GLuint starTex;
 
 //color
 GLuint baseColorUnif;
+
 //=============================================================================
 // załadowanie pliku TGA i zrobienie z niego tekstury
 //=============================================================================
@@ -68,7 +65,6 @@ bool loadTGATexture(const char *texFileName)
 	GLbyte *texPointer;
 	int width, height, components;
 	GLenum format;
-
 
 	// Read the texture bits
 	texPointer = gltReadTGABits(texFileName, &width, &height, &components, &format);
@@ -108,7 +104,7 @@ void prepareGround()
 {
 	
 	// współrzędne wierzchołków
-	GLfloat cubeVertices[4*3] = {
+	GLfloat groundVertices[4*3] = {
 		-0.5f,  0.f,  0.5f,
 		 0.5f,  0.f,  0.5f,
 		-0.5f,  0.f, -0.5f,
@@ -118,8 +114,8 @@ void prepareGround()
 	// normalne - nie ma potrzeby ich definiowania.
 	// Współrzędne wierzchołków są za razem wektorami normalnymi (po ich unormowaniu).
 
-	// współrzędne tekstur dla ścian
-	GLfloat cubeTexCoords[4*2] = {
+	// współrzędne tekstur dla ścianki
+	GLfloat groundTexCoords[4*2] = {
 		0.0f, 0.0f,
 		1.0f, 0.0f,
 		0.0f, 1.0f,
@@ -127,38 +123,38 @@ void prepareGround()
 	};
 
 	// indeksy
-	GLuint cubeIndices[3*2] = {
+	GLuint groundIndices[3*2] = {
 		0, 1, 2,
 		2, 1, 3
 	};
 
 	// wygenerowanie i włączenie tablicy wierzchołków sześcianu
-	glGenVertexArrays(1, &cubeVertexArray);
-	glBindVertexArray(cubeVertexArray);
+	glGenVertexArrays(1, &groundVertexArray);
+	glBindVertexArray(groundVertexArray);
 
 	// utworzenie obiektu bufora wierzchołków (VBO) i załadowanie danych
 	//współrzędne
 	glGenBuffers(1, &verticesBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, verticesBuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(groundVertices), groundVertices, GL_STATIC_DRAW);
 	glVertexAttribPointer(verticesLocation, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
 	// normalne:
 	glGenBuffers(1, &normalsBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, normalsBuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), (GLfloat*)cubeVertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(groundVertices), (GLfloat*)groundVertices, GL_STATIC_DRAW);
 	glVertexAttribPointer(normalsLocation, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
 	// współrzędne tekstury:
 	glGenBuffers(1, &texturesBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, texturesBuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(cubeTexCoords), (GLfloat*)cubeTexCoords, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(groundTexCoords), (GLfloat*)groundTexCoords, GL_STATIC_DRAW);
 	glVertexAttribPointer(texCoordsLocation, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 
 	// indeksy:
 	glGenBuffers(1, &indicesBuffer);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indicesBuffer);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cubeIndices), (GLuint*)cubeIndices, GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(groundIndices), (GLuint*)groundIndices, GL_STATIC_DRAW);
 
 }
 
@@ -210,30 +206,25 @@ void readObj(objShape &obj, char *objFileName, GLuint &objVertexArray)
 
 }
 
-int init(char *objFileName, char *texFileName)
+int init()
 {
-	// ustawienie koloru tła
-	//0	49	83
+	// ustawienie koloru tła na granatowy
 	glClearColor(0.0f, 49.0/256.0 , 83.0f/256.0, 1.0f);
 
 	// wczytanie shaderów i przygotowanie obsługi programu
-	AttachVertexShader(texShader, "ADS_light_tex_vs.glsl");
-	AttachFragmentShader(texShader, "ADS_light_tex_fs.glsl");
+	AttachVertexShader	(texShader,		"ADS_light_tex_vs.glsl");
+	AttachFragmentShader(texShader,		"ADS_light_tex_fs.glsl");
+	AttachVertexShader	(toonShader,	"toon_light_vs.glsl");
+	AttachFragmentShader(toonShader,	"toon_light_fs.glsl");
 
 	// wykonanie powiązania pomiędzy zmienną a indeksem ogólnych atrybutów wierzchołka
-	// operacja ta nie jest konieczna i będzie wykonana automatycznie w czasie
-	// konsolidacji shadera - przypisany zostanie "pierwszy wolny" indeks
 	LinkProgram(texShader);
+	LinkProgram(toonShader);
 
 	// lokalizacja (indeksy) zmiennych w shaderze
-	verticesLocation = glGetAttribLocation(texShader, "inVertex");
-	normalsLocation = glGetAttribLocation(texShader, "inNormal");
-	texCoordsLocation = glGetAttribLocation(texShader, "inTexCoord");
-
-	//////////////////////////////////////////////////////////////////////////////
-	//								PODŁOGA										//
-	//////////////////////////////////////////////////////////////////////////////
-
+	verticesLocation	= glGetAttribLocation(texShader, "inVertex");
+	normalsLocation		= glGetAttribLocation(texShader, "inNormal");
+	texCoordsLocation	= glGetAttribLocation(texShader, "inTexCoord");
 	prepareGround();
 	
 	// włączenie obiektów buforów wierchołków
@@ -241,24 +232,15 @@ int init(char *objFileName, char *texFileName)
 	glEnableVertexAttribArray(normalsLocation);
 	glEnableVertexAttribArray(texCoordsLocation);
 
-
-	AttachVertexShader(toonShader, "toon_light_vs.glsl");
-	AttachFragmentShader(toonShader, "toon_light_fs.glsl");
-
-	// wykonanie powiązania pomiędzy zmienną a indeksem ogólnych atrybutów wierzchołka
-	LinkProgram(toonShader);
-
 	// lokalizacja (indeksy) zmiennych w shaderze
-	verticesLocation = glGetAttribLocation(toonShader, "inVertex");
-	normalsLocation = glGetAttribLocation(toonShader, "inNormal");
+	verticesLocation	= glGetAttribLocation(toonShader, "inVertex");
+	normalsLocation		= glGetAttribLocation(toonShader, "inNormal");
 
 	// wygenerowanie i włączenie tablicy wierzchołków .obj
-	readObj(star, "resources\\obj\\star.obj", starVertexArray); 
-//	readObj(obj, "resources\\obj\\star.obj", objVertexArray); 
-	readObj(cone, "resources\\obj\\cone.obj", coneVertexArray); 
-	readObj(cylinder, "resources\\obj\\cylinder.obj", cylinderVertexArray); 
+	readObj(star,		"resources\\obj\\star.obj",		starVertexArray); 
+	readObj(cone,		"resources\\obj\\cone.obj",		coneVertexArray); 
+	readObj(cylinder,	"resources\\obj\\cylinder.obj",	cylinderVertexArray); 
 
-	
 	// wyłączenie tablicy wierchołków
 	glBindVertexArray(0);
 
@@ -266,8 +248,19 @@ int init(char *objFileName, char *texFileName)
 	glGenTextures(1, &tgaTex);
 	glBindTexture(GL_TEXTURE_2D, tgaTex);
 	// załadowanie tekstury z pliku .tga
-	if (! loadTGATexture(texFileName)) {
-		cout << "Nie ma pliku z teksturą: \"" << texFileName << "\"" << endl;
+	if (! loadTGATexture("resources\\tga\\sciolka.tga")) {
+		cout << "Nie ma pliku z teksturą" << endl;
+		exit(1);
+	}
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	// wygenerowanie i załadowanie tekstury 
+	glGenTextures(1, &starTex);
+
+	glBindTexture(GL_TEXTURE_2D, starTex);
+	// załadowanie tekstury z pliku .tga
+	if (! loadTGATexture("resources\\tga\\niebo.tga")) {
+		cout << "Nie ma pliku z teksturą" << endl;
 		exit(1);
 	}
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -278,7 +271,7 @@ int init(char *objFileName, char *texFileName)
 	glEnable(GL_CULL_FACE);
 
 	// ustawienie początkowego położenia kamery
-	cameraFrame.SetOrigin(2.0f, 2.0f, 18.0f);
+	cameraFrame.SetOrigin(2.0f, 2.0f, 28.0f);
 	// zdefiniowanie potoku renderowania składającego się z dwóch stosów macierzy
 	transformPipeline.SetMatrixStacks(modelViewMatrix, projectionMatrix);
 	return 0;
@@ -290,7 +283,6 @@ int init(char *objFileName, char *texFileName)
 void reshape(int width, int height)
 {
 	// ustawienie obszaru renderingu - całe okno
-
 	glViewport(0, 0, width, height);
 
 	// utworzenie bryły obcięcia określającej perspektywę
@@ -299,25 +291,114 @@ void reshape(int width, int height)
 	projectionMatrix.LoadMatrix(viewFrustum.GetProjectionMatrix());
 }
 
-void drawTrunk(M3DVector4f lightEyeDir, objShape obj, GLuint objVertexArray)
+void drawTrunk()
 {
-	
-	//---------------------------------------------------------------------------------------------
-	// === przekształcenia geometryczne i narysowanie obiektu w innym stanie układu ===
-	// Odłożenie obiektu macierzy na stos
-	//modelViewMatrix.PopMatrix();
-
-	// użycie obiektu shadera
-	glUseProgram(texShader);
-
-	glUniform3fv(glGetUniformLocation(texShader, "inLightDir"), 1, lightEyeDir);
-
-	modelViewMatrix.Rotate(rotateX, 1.0f, 0.0f, 0.0f);
-	modelViewMatrix.Rotate(rotateY, 0.0f, 1.0f, 0.0f);
-	modelViewMatrix.Rotate(rotateZ, 0.0f, 0.0f, 1.0f);
 	modelViewMatrix.Scale(1.0f, 2.0f, 1.0f);
 	modelViewMatrix.Translate(0.0f, 0.5f, 0.0f);
 
+	// załadowanie zmiennej jednorodnej - iloczynu macierzy modelu widoku i projekcji
+	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewProjectionMatrix"), 1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
+
+	// załadowanie zmiennej jednorodnej - transponowanej macierzy modelu widoku
+	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewMatrix"), 1, GL_FALSE, transformPipeline.GetModelViewMatrix());
+
+	//zaladowanie zmiennej jednorodnej - kolor pnia
+	glUniform4f(glGetUniformLocation(toonShader ,"color2"), 0.0f, 0.0f, 0.0f, 1.0f);	
+	
+	// włączenie tablicy wierzchołków .obj
+	glBindVertexArray(cylinderVertexArray);
+	// narysowanie danych zawartych w tablicy wierzchołków .obj
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glDrawElements(GL_TRIANGLES, 3*cylinder.nFaces, GL_UNSIGNED_INT, 0);
+
+}
+
+
+void drawStar()
+{
+	modelViewMatrix.Scale(0.8f, 1.0f, 0.5f);
+	modelViewMatrix.Translate(0.0f, 0.7f, 0.0f);
+
+	// załadowanie zmiennej jednorodnej - iloczynu macierzy modelu widoku i projekcji
+	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewProjectionMatrix"), 1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
+
+	// załadowanie zmiennej jednorodnej - transponowanej macierzy modelu widoku
+	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewMatrix"), 1, GL_FALSE, transformPipeline.GetModelViewMatrix());
+
+	//zaladowanie zmiennej jednorodnej - kolor gornej gwiazdki
+	glUniform4f(glGetUniformLocation(toonShader ,"color2"), 254.0/256.0, 254.0/256.0, 51.0/256.0, 1.0f);	
+
+	// włączenie tablicy wierzchołków .obj
+	glBindVertexArray(starVertexArray);
+	// narysowanie danych zawartych w tablicy wierzchołków .obj
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glDrawElements(GL_TRIANGLES, 3*star.nFaces, GL_UNSIGNED_INT, 0);
+
+}
+
+double angle = 0.0;
+double R=1.0, G=1.0, B=1.0;
+void drawStars(double x, double y, double z, double s)
+{
+	modelViewMatrix.PushMatrix();
+
+	modelViewMatrix.Scale(s, s, s);
+	modelViewMatrix.Translate(x, y, z);
+	modelViewMatrix.Rotate(angle, 0.0, 1.0, 0.0);
+	// załadowanie zmiennej jednorodnej - iloczynu macierzy modelu widoku i projekcji
+	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewProjectionMatrix"), 1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
+
+	// załadowanie zmiennej jednorodnej - transponowanej macierzy modelu widoku
+	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewMatrix"), 1, GL_FALSE, transformPipeline.GetModelViewMatrix());
+
+	//zaladowanie zmiennej jednorodnej - kolor bombek
+	glUniform4f(glGetUniformLocation(toonShader ,"color2"), R, G, B, 1.0f);	
+	
+	angle += 0.3f;
+
+	// włączenie tablicy wierzchołków .obj
+	glBindVertexArray(starVertexArray);
+	
+	// narysowanie danych zawartych w tablicy wierzchołków .obj
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glDrawElements(GL_TRIANGLES, 3*star.nFaces, GL_UNSIGNED_INT, 0);
+
+	// zdjęcie zapamiętanej macierzy widoku-mocelu ze stosu
+	modelViewMatrix.PopMatrix();
+	
+}
+
+void drawLeaves(double x, double y, double z, double scale_x, double scale_y, double scale_z)
+{
+	modelViewMatrix.Translate(x,y,z);
+	modelViewMatrix.Scale(scale_x, scale_y, scale_z);
+
+	// załadowanie zmiennej jednorodnej - iloczynu macierzy modelu widoku i projekcji
+	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewProjectionMatrix"), 1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
+
+	// załadowanie zmiennej jednorodnej - transponowanej macierzy modelu widoku
+	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewMatrix"), 1, GL_FALSE, transformPipeline.GetModelViewMatrix());
+
+	//zaladowanie zmiennej jednorodnej - kolor drzewka
+	glUniform4f(glGetUniformLocation(toonShader ,"color2"), 0.0f, 102.0f/256.0, 51.0f/256.0, 1.0f);
+	
+	// włączenie tablicy wierzchołków .obj
+	glBindVertexArray(coneVertexArray);
+	// narysowanie danych zawartych w tablicy wierzchołków .obj
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glDrawElements(GL_TRIANGLES, 3*cone.nFaces, GL_UNSIGNED_INT, 0);
+
+}
+
+void drawGround()
+{
+	modelViewMatrix.PushMatrix();
+	glUniform3fv(glGetUniformLocation(texShader, "inLightDir"), 1, lightEyeDir);
+
+	modelViewMatrix.Scale(100.0f, 100.0f, 100.0f);
+	
+	
+	// wykonanie obrotów układu
 	// załadowanie zmiennej jednorodnej - iloczynu macierzy modelu widoku i projekcji
 	glUniformMatrix4fv(glGetUniformLocation(texShader, "modelViewProjectionMatrix"),
 		1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
@@ -328,194 +409,109 @@ void drawTrunk(M3DVector4f lightEyeDir, objShape obj, GLuint objVertexArray)
 
 	// załadowanie zmiennej jednorodnej - identyfikatora tekstury
 	glUniform1i(glGetUniformLocation(texShader ,"fileTexture"), 0);
+
+	// włączenie tablicy wierzchołków sześcianu
+	glBindVertexArray(groundVertexArray);
 	
-	// włączenie tablicy wierzchołków .obj
-	glBindVertexArray(objVertexArray);
-	// narysowanie danych zawartych w tablicy wierzchołków .obj
+	// włączenie aktywnej tekstury
+	glBindTexture(GL_TEXTURE_2D, tgaTex);
+
+	// narysowanie danych zawartych w tablicy wierchołków sześcianu
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	glDrawElements(GL_TRIANGLES, 3*obj.nFaces, GL_UNSIGNED_INT, 0);
+	glDrawElements(GL_TRIANGLES, 3*2, GL_UNSIGNED_INT, 0);
 
-	// zdjęcie zapamiętanej macierzy widoku-mocelu ze stosu
-	//modelViewMatrix.PopMatrix();
+	modelViewMatrix.PopMatrix();
 
-	//---------------------------------------------------------------------------------------------
 }
 
 
-void drawStar(M3DVector4f lightEyeDir, objShape obj, GLuint objVertexArray)
-{
-//	modelViewMatrix.PopMatrix();
-
-	// użycie obiektu shadera
-	glUseProgram(toonShader);
-
-	glUniform3fv(glGetUniformLocation(toonShader, "inLightDir"), 1, lightEyeDir);
-
-	modelViewMatrix.Scale(0.8f, 1.0f, 0.5f);
-	modelViewMatrix.Translate(0.0f, 0.7f, 0.0f);
-
-	// załadowanie zmiennej jednorodnej - iloczynu macierzy modelu widoku i projekcji
-	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewProjectionMatrix"),
-		1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
-
-	// załadowanie zmiennej jednorodnej - transponowanej macierzy modelu widoku
-	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewMatrix"),
-		1, GL_FALSE, transformPipeline.GetModelViewMatrix());
-
-	glUniform4f(glGetUniformLocation(toonShader ,"color2"), 254.0/256.0, 254.0/256.0, 51.0/256.0, 1.0f);	
-
-	// włączenie tablicy wierzchołków .obj
-	glBindVertexArray(objVertexArray);
-	// narysowanie danych zawartych w tablicy wierzchołków .obj
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	glDrawElements(GL_TRIANGLES, 3*obj.nFaces, GL_UNSIGNED_INT, 0);
-
-	// zdjęcie zapamiętanej macierzy widoku-mocelu ze stosu
-	//modelViewMatrix.PopMatrix();
-
-	//---------------------------------------------------------------------------------------------
-}
-double angle = 0.0;
-double R=0.0, G=0.0, B=0.0;
-void drawStars(M3DVector4f lightEyeDir, double x, double y, double z)
+void drawSky(double a, double xR, double yR, double zR, double xT, double yT, double zT)
 {
 	modelViewMatrix.PushMatrix();
-
-	// użycie obiektu shadera
-	glUseProgram(toonShader);
-
-	glUniform3fv(glGetUniformLocation(toonShader, "inLightDir"), 1, lightEyeDir);
-
-	modelViewMatrix.Scale(0.1f, 0.1f, 0.1f);
-	modelViewMatrix.Translate(x, y, z);
-	modelViewMatrix.Rotate(angle, 0.0, 1.0, 0.0);
 	
-	angle += 0.3f;
+	// przesunięcie układu
+	/*modelViewMatrix.Rotate(90.0, 0.0, 0.0, 1.0);
+	modelViewMatrix.Translate(0.0, -50.0, 0.0);
+	modelViewMatrix.Scale(100.0f, 100.0f, 100.0f);	
+	*/
+
+	modelViewMatrix.Rotate(a, xR, yR, zR);
+	modelViewMatrix.Translate(xT, yT, zT);
+	modelViewMatrix.Scale(100.0f, 100.0f, 100.0f);	
+
+	// wykonanie obrotów układu
 	// załadowanie zmiennej jednorodnej - iloczynu macierzy modelu widoku i projekcji
-	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewProjectionMatrix"),
+	glUniformMatrix4fv(glGetUniformLocation(texShader, "modelViewProjectionMatrix"),
 		1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
 
 	// załadowanie zmiennej jednorodnej - transponowanej macierzy modelu widoku
-	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewMatrix"),
+	glUniformMatrix4fv(glGetUniformLocation(texShader, "modelViewMatrix"),
 		1, GL_FALSE, transformPipeline.GetModelViewMatrix());
 
-	glUniform4f(glGetUniformLocation(toonShader ,"color2"), R,G,B, 1.0f);	
+	glBindTexture(GL_TEXTURE_2D, starTex);
 
-	// włączenie tablicy wierzchołków .obj
-	glBindVertexArray(starVertexArray);
-	// narysowanie danych zawartych w tablicy wierzchołków .obj
+	// narysowanie danych zawartych w tablicy wierchołków sześcianu
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	glDrawElements(GL_TRIANGLES, 3*star.nFaces, GL_UNSIGNED_INT, 0);
+	glDrawElements(GL_TRIANGLES, 3*2, GL_UNSIGNED_INT, 0);
 
-	// zdjęcie zapamiętanej macierzy widoku-mocelu ze stosu
+
 	modelViewMatrix.PopMatrix();
-	
 }
 
-void drawTree(M3DVector4f lightEyeDir, objShape obj, GLuint objVertexArray)
+void drawTree()
 {
-	
-	//---------------------------------------------------------------------------------------------
-	// === przekształcenia geometryczne i narysowanie obiektu w innym stanie układu ===
-	// Odłożenie obiektu macierzy na stos
-	//modelViewMatrix.PopMatrix();
-
-	// użycie obiektu shadera
-	glUseProgram(toonShader);
-
-	glUniform3fv(glGetUniformLocation(toonShader, "inLightDir"), 1, lightEyeDir);
 
 	//////////////////////////////////////////////////////////////////////////////////////
 	//									DÓŁ												//
 	//////////////////////////////////////////////////////////////////////////////////////
 
-	modelViewMatrix.Translate(0.0f, 1.5f, 0.0f);
-	modelViewMatrix.Scale(8.0f, 2.0f, 8.0f);
+	drawLeaves(0.0f, 1.5f, 0.0f, 8.0f, 2.0f, 8.0f);
 
-
-	// załadowanie zmiennej jednorodnej - iloczynu macierzy modelu widoku i projekcji
-	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewProjectionMatrix"),
-		1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
-
-	// załadowanie zmiennej jednorodnej - transponowanej macierzy modelu widoku
-	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewMatrix"),
-		1, GL_FALSE, transformPipeline.GetModelViewMatrix());
-
-	glUniform4f(glGetUniformLocation(toonShader ,"color2"), 0.0f, 102.0f/256.0, 51.0f/256.0, 1.0f);
-	
-	// włączenie tablicy wierzchołków .obj
-	glBindVertexArray(objVertexArray);
-	// narysowanie danych zawartych w tablicy wierzchołków .obj
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	glDrawElements(GL_TRIANGLES, 3*obj.nFaces, GL_UNSIGNED_INT, 0);
-
-
-	drawStars(lightEyeDir,	2.5, -1.0, -2.5);
-	drawStars(lightEyeDir, -2.5, -1.0, -3.0);
-	drawStars(lightEyeDir, -2.5, -1.0,  2.5);
-	drawStars(lightEyeDir,	2.5, -1.0,  2.5);
+	drawStars( 2.5, -1.0, -2.5, 0.1);
+	drawStars(-2.5, -1.0, -3.0, 0.1);
+	drawStars(-2.5, -1.0,  2.5, 0.1);
+	drawStars( 2.5, -1.0,  2.5, 0.1);
 
 	//////////////////////////////////////////////////////////////////////////////////////
 	//									ŚRODEK											//
 	//////////////////////////////////////////////////////////////////////////////////////
 
-	modelViewMatrix.Translate(0.0f, 0.5f, 0.0f);
-	modelViewMatrix.Scale(0.7f, 0.8f, 0.7f);
+	drawLeaves(0.0f, 0.5f, 0.0f, 0.7f, 0.8f, 0.7f);
 
-
-	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewProjectionMatrix"),
-		1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
-
-	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewMatrix"),
-		1, GL_FALSE, transformPipeline.GetModelViewMatrix());
-
-	glUniform4f(glGetUniformLocation(toonShader ,"color2"), 0.0f, 102.0f/256.0, 51.0f/256.0, 1.0f);
-	
-	glBindVertexArray(objVertexArray);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	glDrawElements(GL_TRIANGLES, 3*obj.nFaces, GL_UNSIGNED_INT, 0);
-
-	drawStars(lightEyeDir,	3.5, -1.0,  0.0);
-	drawStars(lightEyeDir, -3.5, -1.0,  0.0);
-	drawStars(lightEyeDir,  0.0, -1.0, -3.5);
-	drawStars(lightEyeDir,  0.0, -1.0,  3.5);
-	drawStars(lightEyeDir,  0.0, -1.0,  3.5);
+	drawStars( 2.5, -1.0,  0.0, 0.15);
+	drawStars(-2.5, -1.0,  0.0, 0.15);
+	drawStars( 0.0, -1.0, -2.5, 0.15);
+	drawStars( 0.0, -1.0,  2.5, 0.15);
 
 	//////////////////////////////////////////////////////////////////////////////////////
 	//									GÓRA											//
 	//////////////////////////////////////////////////////////////////////////////////////
 
-	modelViewMatrix.Translate(0.0f, 0.5f, 0.0f);
-	modelViewMatrix.Scale(0.6f, 0.7f, 0.6f);
+	drawLeaves(0.0f, 0.5f, 0.0f, 0.6f, 0.6f, 0.6f);
 
-	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewProjectionMatrix"),
-		1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
+	drawStars( 1.5f, -1.0f, -1.5f, 0.2f);
+	drawStars(-1.5f, -1.0f, -1.5f, 0.2f);
+	drawStars(-1.5f, -1.0f,  1.5f, 0.2f);
+	drawStars( 1.5f, -1.0f,  1.5f, 0.2f);
 
-	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewMatrix"),
-		1, GL_FALSE, transformPipeline.GetModelViewMatrix());
+}
 
-	glUniform4f(glGetUniformLocation(toonShader ,"color2"), 0.0f, 102.0f/256.0, 51.0f/256.0, 1.0f);
-	
-	glBindVertexArray(objVertexArray);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	glDrawElements(GL_TRIANGLES, 3*obj.nFaces, GL_UNSIGNED_INT, 0);
-
-	drawStars(lightEyeDir,	2.5, -1.0, -2.5);
-	drawStars(lightEyeDir, -2.5, -1.0, -3.0);
-	drawStars(lightEyeDir, -2.5, -1.0,  2.5);
-	drawStars(lightEyeDir,	2.5, -1.0,  2.5);
-
-	// zdjęcie zapamiętanej macierzy widoku-mocelu ze stosu
-	//modelViewMatrix.PopMatrix();
-
-	//---------------------------------------------------------------------------------------------
+void drawChristmasTree(double x, double z, double scale = 1.0)
+{
+	modelViewMatrix.PushMatrix();
+	modelViewMatrix.Scale(scale, scale, scale);
+	modelViewMatrix.Translate(x, 0.0, z);
+	drawTrunk();
+	drawTree();
+	drawStar();
+	modelViewMatrix.PopMatrix();
 }
 
 //=============================================================================
 // wyświetlenie sceny
 //=============================================================================
-double lol = 0.0f;
-
+double rotation = 0.0f;
+double lightRot = 0.0f;
 void display(void)
 {
 	// czyszczenie bufora koloru
@@ -529,79 +525,88 @@ void display(void)
 	modelViewMatrix.LoadMatrix(mCamera);
 
 	// użycie obiektu shadera
-	glUseProgram(toonShader);
-
-	M3DVector4f lightEyeDir;
+	lightRot += 0.005;
+	
+	lightDir[0]=50*sin(lightRot);
+	lightDir[1]=50*cos(lightRot);
+	
 	// przetransformowanie kierunku światła do współrzędnych obserwatora
 	m3dTransformVector4(lightEyeDir, lightDir, mCamera);
 	// załadowanie zmiennej jednorodnej - kierunku światla
 	// dalsze przekształcenia zmieniają macierz Widoku Modelu, ale nie wpływają
 	// na światło - obracamy obiektami a nie światłem
-	float light[3] = {5.0, 5.0, 2.0};
 	glUniform3fv(glGetUniformLocation(toonShader, "inLightDir"), 1, lightEyeDir);
-	glUniform3fv(glGetUniformLocation(toonShader, "inLightDir"), 1, light);
 
 	// === przekształcenia geometryczne i narysowanie obiektu w innym stanie układu ===
 	// Odłożenie obiektu macierzy na stos
+	modelViewMatrix.Rotate(rotation, 0.0, 1.0, 0.0);
+	//modelViewMatrix.Translate(5.0, 0.0, 0.0);
+	rotation += 0.1;
 
-
-	modelViewMatrix.Rotate(lol, 0.0, 1.0, 0.0);
-	modelViewMatrix.Translate(5.0, 0.0, 0.0);
-	lol += 0.1;
-
-	modelViewMatrix.PushMatrix();
-
+	//modelViewMatrix.PushMatrix();
 
 	// użycie obiektu shadera
 	glUseProgram(texShader);
-
-	glUniform3fv(glGetUniformLocation(texShader, "inLightDir"), 1, lightEyeDir);
-
-	// przesunięcie układu
-	modelViewMatrix.Translate(0.0f, 0.0f, 0.0f);
-	modelViewMatrix.Scale(100.0f, 100.0f, 100.0f);
-	// wykonanie obrotów układu
-	modelViewMatrix.Rotate(rotateX, 1.0f, 0.0f, 0.0f);
-	modelViewMatrix.Rotate(rotateY, 0.0f, 1.0f, 0.0f);
-	modelViewMatrix.Rotate(rotateZ, 0.0f, 0.0f, 1.0f);
-
-	// załadowanie zmiennej jednorodnej - iloczynu macierzy modelu widoku i projekcji
-	glUniformMatrix4fv(glGetUniformLocation(texShader, "modelViewProjectionMatrix"),
-		1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
-
-	// załadowanie zmiennej jednorodnej - transponowanej macierzy modelu widoku
-	glUniformMatrix4fv(glGetUniformLocation(texShader, "modelViewMatrix"),
-		1, GL_FALSE, transformPipeline.GetModelViewMatrix());
-
-	// załadowanie zmiennej jednorodnej - identyfikatora tekstury
-	glUniform1i(glGetUniformLocation(texShader ,"fileTexture"), 0);
-
-	// włączenie tablicy wierzchołków sześcianu
-	glBindVertexArray(cubeVertexArray);
 	
-	// włączenie aktywnej tekstury
-	glBindTexture(GL_TEXTURE_2D, tgaTex);
-	// narysowanie danych zawartych w tablicy wierchołków sześcianu
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	glDrawElements(GL_TRIANGLES, 3*2, GL_UNSIGNED_INT, 0);
+
+	drawGround();
+	drawSky(90.0, 0.0, 0.0, 1.0, 0.0, -50.0, 0.0);
+	drawSky(180.0, 0.0, 0.0, 1.0, 0.0, -50.0, 0.0);
+	drawSky(270.0, 0.0, 0.0, 1.0, 0.0, -50.0, 0.0);
+	drawSky(90.0, 1.0, 0.0, 0.0, 0.0, -50.0, 0.0);
+	drawSky(270.0, 1.0, 0.0, 0.0, 0.0, -50.0, 0.0);
 
 	// zdjęcie zapamiętanej macierzy widoku-mocelu ze stosu
+	
+	//modelViewMatrix.PopMatrix();
+
+	// użycie obiektu shadera
+	glUseProgram(toonShader);
+	glUniform3fv(glGetUniformLocation(toonShader, "inLightDir"), 1, lightEyeDir);
+	
+
+	
+	modelViewMatrix.PushMatrix();
+	drawTrunk();
+	drawTree();
+	drawStar();
 	modelViewMatrix.PopMatrix();
-	
-	drawTrunk(lightEyeDir, cylinder, cylinderVertexArray);
-	drawTree(lightEyeDir, cone, coneVertexArray);
-	
-	drawStar(lightEyeDir, star, starVertexArray);
+
+	modelViewMatrix.PushMatrix();
+	modelViewMatrix.Translate(15.0, 0.0, 0.0);
+	drawTrunk();
+	drawTree();
+	drawStar();
+	modelViewMatrix.PopMatrix();
+
+	modelViewMatrix.PushMatrix();
+	modelViewMatrix.Translate(10.0, 0.0, 20.0);
+	drawTrunk();
+	drawTree();
+	drawStar();
+	modelViewMatrix.PopMatrix();
+
+	modelViewMatrix.PushMatrix();
+	modelViewMatrix.Translate(-30.0, 0.0, 10.0);
+	drawTrunk();
+	drawTree();
+	drawStar();
+	modelViewMatrix.PopMatrix();
+
+	modelViewMatrix.PushMatrix();
+	modelViewMatrix.Translate(15.0, 0.0, 0.0);
+	drawTrunk();
+	drawTree();
+	drawStar();
+	modelViewMatrix.PopMatrix();
+
 
 	// wyłączenie tablic wierzhołków
 	glBindVertexArray(0);
-
 	// wyłączenie tekstury
 	glBindTexture(GL_TEXTURE_2D, tgaTex);
-
 	// wyłączenie shadera
 	glUseProgram(0);
-
 	// wyrenderowanie sceny
 	glFlush();
 
@@ -623,45 +628,14 @@ void standardKbd(unsigned char key, int x, int y)
 	// obsługa standardowych klawiszy
 	switch (key) {
 		// zdefiniowanie obrotów kamery wokół osi x, y, z
-		case '1': {if(R+0.2<=1.0) R+=0.2;}
+		case '1': { R=1.0; G=1.0; B=1.0;}
 			break;
-		case '2': {if(R-0.2>=0.0) R-=0.2;}
+		case '2': { R=1.0; G=1.0; B=0.0;}
 			break;
-		case '3': {if(G+0.2<=1.0) G+=0.2;}
+		case '3': { R=0.0; G=1.0; B=0.0;}
 			break;
-		case '4': {if(G-0.2>=0.0) G-=0.2;}
+		case '4': { R=0.0; G=1.0; B=1.0;}
 			break;
-		case '5': {if(B+0.2<=1.0) B+=0.2;}
-			break;
-		case '6': {if(B-0.2>=0.0) B-=0.2;}
-			break;
-		// zdefiniowanie obrotów układu wokół osi x, y, z
-		case 'j': rotateX += 10.0f;
-			break;
-		case 'J': rotateX -= 10.0f;
-			break;
-		case 'k': rotateY += 10.0f;
-			break;
-		case 'K': rotateY -= 10.0f;
-			break;
-		case 'l': rotateZ += 10.0f;
-			break;
-		case 'L': rotateZ -= 10.0f;
-			break;
-		// zdefiniowanie wektora kierunku światła
-		case 'u': {lightDir[0] += 10.0; cout << "\n0 " << lightDir[0];}
-			break;
-		case 'U': {lightDir[0] -= 10.0; cout << "\n0 "<< lightDir[0];}
-			break;
-		case 'i': {lightDir[1] += 10.0; cout << "\n1 "<< lightDir[1];}
-			break;
-		case 'I': {lightDir[1] -= 10.0; cout << "\n1 "<< lightDir[1];}
-			break;
-		case 'o': {lightDir[2] += 10.0; cout << "\n2 "<< lightDir[2];}
-			break;
-		case 'O': {lightDir[2] -= 10.0; cout << "\n2 "<< lightDir[2];}
-			break;
-
 		case 27: exit(0);
 	}
 	// wymuszenie odrysowania okna
@@ -669,28 +643,6 @@ void standardKbd(unsigned char key, int x, int y)
 	glutPostRedisplay();
 }
 
-//=============================================================================
-// obsługa klawiatury - klawisze specjalne
-//=============================================================================
-void specialKbd (int key, int x, int y)
-{
-	// obsługa klawiszy funkcyjnych - analogicznie jak podstawowych
-	switch (key) {
-		case GLUT_KEY_RIGHT: cameraFrame.TranslateWorld(-0.1f, 0.0f, 0.0f);
-			break;
-		case GLUT_KEY_LEFT: cameraFrame.TranslateWorld(0.1f, 0.0f, 0.0f);
-			break;
-		case GLUT_KEY_UP: cameraFrame.TranslateWorld(0.0f, -0.1f, 0.0f);
-			break;
-		case GLUT_KEY_DOWN: cameraFrame.TranslateWorld(0.0f, 0.1f, 0.0f);
-			break;
-		case GLUT_KEY_PAGE_UP: cameraFrame.TranslateWorld(0.0f, 0.0f, -0.1f);
-			break;
-		case GLUT_KEY_PAGE_DOWN: cameraFrame.TranslateWorld(0.0f, 0.0f, 0.1f);
-			break;
-	}
-	glutPostRedisplay();
-}
 
 //=============================================================================
 // główna funkcja programu
@@ -698,14 +650,6 @@ void specialKbd (int key, int x, int y)
 
 int main(int argc, char** argv)
 {
-	if (argc != 3) {
-		cout << "usage:" << endl;
-		cout << "   " << argv[0] << " <obj file> <tex file>" << endl;
-		return 1;
-		int d;
-		cin >> d;
-	}
-
 	gltSetWorkingDirectory(argv[0]);
 	// ustalenie odpowiedniego kontekstu renderowania
 	glutInitContextVersion(3, 3);
@@ -732,13 +676,8 @@ int main(int argc, char** argv)
 		cout << "Blad glewInit: " << glewGetErrorString(glewErr) << endl;
 		return 2;
 	}
-	cout << "Wersja biblioteki GLEW: " << glewGetString(GLEW_VERSION) << endl;
 
-
-	// wykonanie czynności przygotowawczych programu
-	if (init("klfasld", "resources\\tga\\sciolka.tga"))
-		return 3;
-
+	init();
 
 	// ======================   funkcje callback ==================================
 	// funkcja obsługująca zdarzenie konieczności odrysowania okna
@@ -747,13 +686,9 @@ int main(int argc, char** argv)
 	glutReshapeFunc(reshape);
 	// funkcja obsługująca naciśnięcie standardowego klawisza z klawiatury
 	glutKeyboardFunc(standardKbd);
-	// funkcja obsługująca naciśnięcie klawisza specjalnego z klawiatury
-	glutSpecialFunc(specialKbd);
  	//=============================================================================
 	// główna pętla programu
 	glutMainLoop();
 
 	return 0;
 }
-
-

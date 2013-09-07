@@ -142,7 +142,6 @@ bool objShape::checkIndices(vector3<GLuint> *indices)
 // odczyt danych z pliku
 int objShape::readFromFile(const char *objFileName)
 {
-	cout << "dupa1\n";
 	ifstream objFile;
 	stringstream ssBuff;
 	string type, sVert, sBuff, sVertex;
@@ -155,13 +154,11 @@ int objShape::readFromFile(const char *objFileName)
 		return 1;
 	}
 
-	cout << "dupa2\n";
 	// policzenie atrybutów obiektu z pliku z .obj
 	if ( countAttrFromObjFile (objFile) )
 		return 2;
 	objFile.close();
 
-	cout << "dupa3\n";
 	// Przydzielenie pamięci na tablice wartości i indeksów
 	vertices = new vector3<GLfloat> [nVertices];
 	indVerts = new vector3<GLuint> [nFaces];
@@ -175,10 +172,9 @@ int objShape::readFromFile(const char *objFileName)
 		indTexts = new vector3<GLuint> [nFaces];
 	}
 
-	cout << "dupa4\n";
 	// właściwe odczytanie danych z pliku
 	objFile.open(objFileName);
-	cout << "dupa5\n";
+
 	while ( !checkEOF(objFile) ) {
 		type.clear();
 		objFile >> type;
