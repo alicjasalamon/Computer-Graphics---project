@@ -65,7 +65,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="08_ADS-Tex_2obj.cpp" />
+    <ClCompile Include="AlicjaSalamon.cpp" />
     <ClCompile Include="obj.cpp" />
     <ClCompile Include="shaders.cpp" />
     <ClCompile Include="targa.cpp" />
@@ -77,10 +77,10 @@
     <ClInclude Include="vecmatquat.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="ADS_light_tex_fs.glsl" />
-    <None Include="ADS_light_tex_vs.glsl" />
-    <None Include="toon_light_fs.glsl" />
-    <None Include="toon_light_vs.glsl" />
+    <None Include="textures_fs.glsl" />
+    <None Include="textures_vs.glsl" />
+    <None Include="nothing_special_fs.glsl" />
+    <None Include="nothing_special_vs.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

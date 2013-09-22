@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="08_ADS-Tex_2obj.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="obj.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -25,6 +22,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="targa.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AlicjaSalamon.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -43,16 +43,16 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="toon_light_fs.glsl">
+    <None Include="nothing_special_fs.glsl">
       <Filter>Source Files</Filter>
     </None>
-    <None Include="toon_light_vs.glsl">
+    <None Include="nothing_special_vs.glsl">
       <Filter>Source Files</Filter>
     </None>
-    <None Include="ADS_light_tex_fs.glsl">
+    <None Include="textures_vs.glsl">
       <Filter>Source Files</Filter>
     </None>
-    <None Include="ADS_light_tex_vs.glsl">
+    <None Include="textures_fs.glsl">
       <Filter>Source Files</Filter>
     </None>
   </ItemGroup>

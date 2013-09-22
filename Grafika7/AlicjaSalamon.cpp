@@ -35,9 +35,9 @@ GLfloat lightDir[4];
 M3DVector4f lightEyeDir;
 
 // identyfikator obiektu programu
-GLuint toonShader, texShader;
+GLuint singleColorShader, texShader;
 
-// identyfikatory obiektów tablic wierchołków dla .obj i sześcianu
+// identyfikatory obiektów tablic wierchołków dla .obj i sciany
 GLuint objVertexArray;
 GLuint coneVertexArray;
 GLuint cylinderVertexArray;
@@ -212,14 +212,14 @@ int init()
 	glClearColor(0.0f, 49.0/256.0 , 83.0f/256.0, 1.0f);
 
 	// wczytanie shaderów i przygotowanie obsługi programu
-	AttachVertexShader	(texShader,		"ADS_light_tex_vs.glsl");
-	AttachFragmentShader(texShader,		"ADS_light_tex_fs.glsl");
-	AttachVertexShader	(toonShader,	"toon_light_vs.glsl");
-	AttachFragmentShader(toonShader,	"toon_light_fs.glsl");
+	AttachVertexShader	(texShader,		"textures_vs.glsl");
+	AttachFragmentShader(texShader,		"textures_fs.glsl");
+	AttachVertexShader	(singleColorShader,	"nothing_special_vs.glsl");
+	AttachFragmentShader(singleColorShader,	"nothing_special_fs.glsl");
 
 	// wykonanie powiązania pomiędzy zmienną a indeksem ogólnych atrybutów wierzchołka
 	LinkProgram(texShader);
-	LinkProgram(toonShader);
+	LinkProgram(singleColorShader);
 
 	// lokalizacja (indeksy) zmiennych w shaderze
 	verticesLocation	= glGetAttribLocation(texShader, "inVertex");
@@ -233,8 +233,8 @@ int init()
 	glEnableVertexAttribArray(texCoordsLocation);
 
 	// lokalizacja (indeksy) zmiennych w shaderze
-	verticesLocation	= glGetAttribLocation(toonShader, "inVertex");
-	normalsLocation		= glGetAttribLocation(toonShader, "inNormal");
+	verticesLocation	= glGetAttribLocation(singleColorShader, "inVertex");
+	normalsLocation		= glGetAttribLocation(singleColorShader, "inNormal");
 
 	// wygenerowanie i włączenie tablicy wierzchołków .obj
 	readObj(star,		"resources\\obj\\star.obj",	starVertexArray); 
@@ -297,13 +297,13 @@ void drawTrunk()
 	modelViewMatrix.Translate(0.0f, 0.5f, 0.0f);
 
 	// załadowanie zmiennej jednorodnej - iloczynu macierzy modelu widoku i projekcji
-	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewProjectionMatrix"), 1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
+	glUniformMatrix4fv(glGetUniformLocation(singleColorShader, "modelViewProjectionMatrix"), 1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
 
 	// załadowanie zmiennej jednorodnej - transponowanej macierzy modelu widoku
-	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewMatrix"), 1, GL_FALSE, transformPipeline.GetModelViewMatrix());
+	glUniformMatrix4fv(glGetUniformLocation(singleColorShader, "modelViewMatrix"), 1, GL_FALSE, transformPipeline.GetModelViewMatrix());
 
 	//zaladowanie zmiennej jednorodnej - kolor pnia
-	glUniform4f(glGetUniformLocation(toonShader ,"color2"), 0.0f, 0.0f, 0.0f, 1.0f);	
+	glUniform4f(glGetUniformLocation(singleColorShader ,"color2"), 0.0f, 0.0f, 0.0f, 1.0f);	
 	
 	// włączenie tablicy wierzchołków .obj
 	glBindVertexArray(cylinderVertexArray);
@@ -320,13 +320,13 @@ void drawStar()
 	modelViewMatrix.Translate(0.0f, 0.7f, 0.0f);
 
 	// załadowanie zmiennej jednorodnej - iloczynu macierzy modelu widoku i projekcji
-	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewProjectionMatrix"), 1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
+	glUniformMatrix4fv(glGetUniformLocation(singleColorShader, "modelViewProjectionMatrix"), 1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
 
 	// załadowanie zmiennej jednorodnej - transponowanej macierzy modelu widoku
-	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewMatrix"), 1, GL_FALSE, transformPipeline.GetModelViewMatrix());
+	glUniformMatrix4fv(glGetUniformLocation(singleColorShader, "modelViewMatrix"), 1, GL_FALSE, transformPipeline.GetModelViewMatrix());
 
 	//zaladowanie zmiennej jednorodnej - kolor gornej gwiazdki
-	glUniform4f(glGetUniformLocation(toonShader ,"color2"), 254.0/256.0, 254.0/256.0, 51.0/256.0, 1.0f);	
+	glUniform4f(glGetUniformLocation(singleColorShader ,"color2"), 254.0/256.0, 254.0/256.0, 51.0/256.0, 1.0f);	
 
 	// włączenie tablicy wierzchołków .obj
 	glBindVertexArray(starVertexArray);
@@ -346,13 +346,13 @@ void drawStars(double x, double y, double z, double s)
 	modelViewMatrix.Translate(x, y, z);
 	modelViewMatrix.Rotate(angle, 0.0, 1.0, 0.0);
 	// załadowanie zmiennej jednorodnej - iloczynu macierzy modelu widoku i projekcji
-	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewProjectionMatrix"), 1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
+	glUniformMatrix4fv(glGetUniformLocation(singleColorShader, "modelViewProjectionMatrix"), 1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
 
 	// załadowanie zmiennej jednorodnej - transponowanej macierzy modelu widoku
-	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewMatrix"), 1, GL_FALSE, transformPipeline.GetModelViewMatrix());
+	glUniformMatrix4fv(glGetUniformLocation(singleColorShader, "modelViewMatrix"), 1, GL_FALSE, transformPipeline.GetModelViewMatrix());
 
 	//zaladowanie zmiennej jednorodnej - kolor bombek
-	glUniform4f(glGetUniformLocation(toonShader ,"color2"), R, G, B, 1.0f);	
+	glUniform4f(glGetUniformLocation(singleColorShader ,"color2"), R, G, B, 1.0f);	
 
 	// włączenie tablicy wierzchołków .obj
 	glBindVertexArray(starVertexArray);
@@ -371,13 +371,13 @@ void drawLeaves(double x, double y, double z, double scale_x, double scale_y, do
 	modelViewMatrix.Scale(scale_x, scale_y, scale_z);
 
 	// załadowanie zmiennej jednorodnej - iloczynu macierzy modelu widoku i projekcji
-	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewProjectionMatrix"), 1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
+	glUniformMatrix4fv(glGetUniformLocation(singleColorShader, "modelViewProjectionMatrix"), 1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
 
 	// załadowanie zmiennej jednorodnej - transponowanej macierzy modelu widoku
-	glUniformMatrix4fv(glGetUniformLocation(toonShader, "modelViewMatrix"), 1, GL_FALSE, transformPipeline.GetModelViewMatrix());
+	glUniformMatrix4fv(glGetUniformLocation(singleColorShader, "modelViewMatrix"), 1, GL_FALSE, transformPipeline.GetModelViewMatrix());
 
 	//zaladowanie zmiennej jednorodnej - kolor drzewka
-	glUniform4f(glGetUniformLocation(toonShader ,"color2"), 0.0f, 102.0f/256.0, 51.0f/256.0, 1.0f);
+	glUniform4f(glGetUniformLocation(singleColorShader ,"color2"), 0.0f, 102.0f/256.0, 51.0f/256.0, 1.0f);
 	
 	// włączenie tablicy wierzchołków .obj
 	glBindVertexArray(coneVertexArray);
@@ -516,9 +516,8 @@ void display(void)
 	// (nie ma zatem potrzeby uprzedniego ładowania macierzy jednostkowej)
 	modelViewMatrix.LoadMatrix(mCamera);
 
-	// użycie obiektu shadera
-	//lightRot += 0.005;
 	angle += 1.0f;
+	rotation += 0.1;
 
 	lightDir[0]=50*sin(lightRot);
 	lightDir[1]=50*cos(lightRot);
@@ -528,13 +527,13 @@ void display(void)
 	// załadowanie zmiennej jednorodnej - kierunku światla
 	// dalsze przekształcenia zmieniają macierz Widoku Modelu, ale nie wpływają
 	// na światło - obracamy obiektami a nie światłem
-	glUniform3fv(glGetUniformLocation(toonShader, "inLightDir"), 1, lightEyeDir);
+	glUniform3fv(glGetUniformLocation(singleColorShader, "inLightDir"), 1, lightEyeDir);
 
 	// === przekształcenia geometryczne i narysowanie obiektu w innym stanie układu ===
 	// Odłożenie obiektu macierzy na stos
 	modelViewMatrix.Rotate(rotation, 0.0, 1.0, 0.0);
 	//modelViewMatrix.Translate(5.0, 0.0, 0.0);
-	rotation += 0.1;
+	//rotation += 0.1;
 
 	//modelViewMatrix.PushMatrix();
 
@@ -554,8 +553,8 @@ void display(void)
 	//modelViewMatrix.PopMatrix();
 
 	// użycie obiektu shadera
-	glUseProgram(toonShader);
-	glUniform3fv(glGetUniformLocation(toonShader, "inLightDir"), 1, lightEyeDir);
+	glUseProgram(singleColorShader);
+	glUniform3fv(glGetUniformLocation(singleColorShader, "inLightDir"), 1, lightEyeDir);
 	
 	drawChristmasTree(40, -40, 2.0);
 	drawChristmasTree(40, 40, 2.0);
@@ -642,7 +641,7 @@ int main(int argc, char** argv)
 	// położenie okna na ekranie (względem lewego dolnego rogu)
 	glutInitWindowPosition(100, 100);
 	// stworzenie okna programu
-	glutCreateWindow("Choinka lol");
+	glutCreateWindow("Alicja Salamon i super choinki");
 
 	// inicjalizacja biblioteki GLEW
 	glewExperimental = GL_TRUE;
