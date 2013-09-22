@@ -237,7 +237,7 @@ int init()
 	normalsLocation		= glGetAttribLocation(toonShader, "inNormal");
 
 	// wygenerowanie i włączenie tablicy wierzchołków .obj
-	readObj(star,		"resources\\obj\\star.obj",		starVertexArray); 
+	readObj(star,		"resources\\obj\\star.obj",	starVertexArray); 
 	readObj(cone,		"resources\\obj\\cone.obj",		coneVertexArray); 
 	readObj(cylinder,	"resources\\obj\\cylinder.obj",	cylinderVertexArray); 
 
@@ -256,7 +256,6 @@ int init()
 
 	// wygenerowanie i załadowanie tekstury 
 	glGenTextures(1, &starTex);
-
 	glBindTexture(GL_TEXTURE_2D, starTex);
 	// załadowanie tekstury z pliku .tga
 	if (! loadTGATexture("resources\\tga\\niebo.tga")) {
@@ -271,7 +270,8 @@ int init()
 	glEnable(GL_CULL_FACE);
 
 	// ustawienie początkowego położenia kamery
-	cameraFrame.SetOrigin(2.0f, 2.0f, 28.0f);
+	cameraFrame.SetOrigin(35.0f, 18.0f, 25.0f);
+
 	// zdefiniowanie potoku renderowania składającego się z dwóch stosów macierzy
 	transformPipeline.SetMatrixStacks(modelViewMatrix, projectionMatrix);
 	return 0;
@@ -286,7 +286,7 @@ void reshape(int width, int height)
 	glViewport(0, 0, width, height);
 
 	// utworzenie bryły obcięcia określającej perspektywę
-	viewFrustum.SetPerspective(55.0f, float(width)/float(height), 1.0f, 100.0f);
+	viewFrustum.SetPerspective(55.0f, float(width)/float(height), 1.0f, 1000.0f);
 	// załadowanie macierzy opisującej bryłę obcięcia do macierzy Projekcji
 	projectionMatrix.LoadMatrix(viewFrustum.GetProjectionMatrix());
 }
@@ -353,12 +353,9 @@ void drawStars(double x, double y, double z, double s)
 
 	//zaladowanie zmiennej jednorodnej - kolor bombek
 	glUniform4f(glGetUniformLocation(toonShader ,"color2"), R, G, B, 1.0f);	
-	
-	angle += 0.3f;
 
 	// włączenie tablicy wierzchołków .obj
 	glBindVertexArray(starVertexArray);
-	
 	// narysowanie danych zawartych w tablicy wierzchołków .obj
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glDrawElements(GL_TRIANGLES, 3*star.nFaces, GL_UNSIGNED_INT, 0);
@@ -395,7 +392,7 @@ void drawGround()
 	modelViewMatrix.PushMatrix();
 	glUniform3fv(glGetUniformLocation(texShader, "inLightDir"), 1, lightEyeDir);
 
-	modelViewMatrix.Scale(100.0f, 100.0f, 100.0f);
+	modelViewMatrix.Scale(200.0f, 200.0f, 200.0f);
 	
 	
 	// wykonanie obrotów układu
@@ -430,14 +427,9 @@ void drawSky(double a, double xR, double yR, double zR, double xT, double yT, do
 	modelViewMatrix.PushMatrix();
 	
 	// przesunięcie układu
-	/*modelViewMatrix.Rotate(90.0, 0.0, 0.0, 1.0);
-	modelViewMatrix.Translate(0.0, -50.0, 0.0);
-	modelViewMatrix.Scale(100.0f, 100.0f, 100.0f);	
-	*/
-
 	modelViewMatrix.Rotate(a, xR, yR, zR);
 	modelViewMatrix.Translate(xT, yT, zT);
-	modelViewMatrix.Scale(100.0f, 100.0f, 100.0f);	
+	modelViewMatrix.Scale(200.0f, 200.0f, 200.0f);	
 
 	// wykonanie obrotów układu
 	// załadowanie zmiennej jednorodnej - iloczynu macierzy modelu widoku i projekcji
@@ -525,8 +517,9 @@ void display(void)
 	modelViewMatrix.LoadMatrix(mCamera);
 
 	// użycie obiektu shadera
-	lightRot += 0.005;
-	
+	//lightRot += 0.005;
+	angle += 1.0f;
+
 	lightDir[0]=50*sin(lightRot);
 	lightDir[1]=50*cos(lightRot);
 	
@@ -550,11 +543,11 @@ void display(void)
 	
 
 	drawGround();
-	drawSky(90.0, 0.0, 0.0, 1.0, 0.0, -50.0, 0.0);
-	drawSky(180.0, 0.0, 0.0, 1.0, 0.0, -50.0, 0.0);
-	drawSky(270.0, 0.0, 0.0, 1.0, 0.0, -50.0, 0.0);
-	drawSky(90.0, 1.0, 0.0, 0.0, 0.0, -50.0, 0.0);
-	drawSky(270.0, 1.0, 0.0, 0.0, 0.0, -50.0, 0.0);
+	drawSky(90.0, 0.0, 0.0, 1.0, 0.0, -100.0, 0.0);
+	drawSky(180.0, 0.0, 0.0, 1.0, 0.0, -100.0, 0.0);
+	drawSky(270.0, 0.0, 0.0, 1.0, 0.0, -100.0, 0.0);
+	drawSky(90.0, 1.0, 0.0, 0.0, 0.0, -100.0, 0.0);
+	drawSky(270.0, 1.0, 0.0, 0.0, 0.0, -100.0, 0.0);
 
 	// zdjęcie zapamiętanej macierzy widoku-mocelu ze stosu
 	
@@ -564,41 +557,21 @@ void display(void)
 	glUseProgram(toonShader);
 	glUniform3fv(glGetUniformLocation(toonShader, "inLightDir"), 1, lightEyeDir);
 	
-
-	
-	modelViewMatrix.PushMatrix();
-	drawTrunk();
-	drawTree();
-	drawStar();
-	modelViewMatrix.PopMatrix();
-
-	modelViewMatrix.PushMatrix();
-	modelViewMatrix.Translate(15.0, 0.0, 0.0);
-	drawTrunk();
-	drawTree();
-	drawStar();
-	modelViewMatrix.PopMatrix();
-
-	modelViewMatrix.PushMatrix();
-	modelViewMatrix.Translate(10.0, 0.0, 20.0);
-	drawTrunk();
-	drawTree();
-	drawStar();
-	modelViewMatrix.PopMatrix();
-
-	modelViewMatrix.PushMatrix();
-	modelViewMatrix.Translate(-30.0, 0.0, 10.0);
-	drawTrunk();
-	drawTree();
-	drawStar();
-	modelViewMatrix.PopMatrix();
-
-	modelViewMatrix.PushMatrix();
-	modelViewMatrix.Translate(15.0, 0.0, 0.0);
-	drawTrunk();
-	drawTree();
-	drawStar();
-	modelViewMatrix.PopMatrix();
+	drawChristmasTree(40, -40, 2.0);
+	drawChristmasTree(40, 40, 2.0);
+	drawChristmasTree(-40, -40, 2.0);
+	drawChristmasTree(-40, 40, 2.0);
+	drawChristmasTree(-13, -46, 2.0);
+	drawChristmasTree(24, -35, 2.0);
+	drawChristmasTree(29, 46, 2.0);
+	drawChristmasTree(-27, -39, 2.0);
+	drawChristmasTree(-39, -9, 2.0);
+	drawChristmasTree(-34, 31, 2.0);
+	drawChristmasTree(24, 28, 2.0);
+	drawChristmasTree(40, -20, 2.0);
+	drawChristmasTree(40, 20, 2.0);
+	drawChristmasTree(-20, -40, 2.0);
+	drawChristmasTree(-20, 40, 2.0);
 
 
 	// wyłączenie tablic wierzhołków
@@ -635,6 +608,10 @@ void standardKbd(unsigned char key, int x, int y)
 		case '3': { R=0.0; G=1.0; B=0.0;}
 			break;
 		case '4': { R=0.0; G=1.0; B=1.0;}
+			break;
+		case 'k': { lightRot += 0.05;}
+			break;
+		case 'l': { lightRot -= 0.05;}
 			break;
 		case 27: exit(0);
 	}

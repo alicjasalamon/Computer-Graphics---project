@@ -25,7 +25,7 @@ void main(void)
 	vec3 reflection = normalize(reflect(-light, normal));
 
 	// ustalenie koloru "ambient"
-	vec4 ambient = vec4(0.1, 0.2, 0.2, 1.0);
+	vec4 ambient = vec4(0.05, 0.05, 0.05, 1.0);
 
 	// Obliczenie współczynnika intensywności oświetlenia
 	float diffuseIntensity = pow(max(dot(normal, light), 0.0), 0.5);
